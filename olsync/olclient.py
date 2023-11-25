@@ -22,6 +22,7 @@ LOGIN_URL = "https://www.overleaf.com/login"
 PROJECT_URL = "https://www.overleaf.com/project"  # The dashboard URL
 # The URL to download all the files in zip format
 DOWNLOAD_URL = "https://www.overleaf.com/project/{}/download/zip"
+VERSION_DOWNLOAD_URL = "https://www.overleaf.com/project/{}/version/{}/zip"
 UPLOAD_URL = "https://www.overleaf.com/project/{}/upload"  # The URL to upload files
 FOLDER_URL = "https://www.overleaf.com/project/{}/folder"  # The URL to create folders
 DELETE_URL = "https://www.overleaf.com/project/{}/doc/{}"  # The URL to delete files
@@ -105,14 +106,17 @@ class OverleafClient(object):
             BeautifulSoup(projects_page.content, 'html.parser').find("meta", {"content": re.compile('\{.*"projects".*\}')}).get('content'))
         return next(OverleafClient.filter_projects(json_content['projects'], {"name": project_name}), None)
 
-    def download_project(self, project_id):
+    def download_project(self, project_id, version=None):
         """
         Download project in zip format
         Params: project_id, the id of the project
         Returns: bytes string (zip file)
         """
-        r = reqs.get(DOWNLOAD_URL.format(project_id),
-                     stream=True, cookies=self._cookie)
+        if version is None:
+            url = DOWNLOAD_URL.format(project_id)
+        else:
+            url = VERSION_DOWNLOAD_URL.format(project_id, version)
+        r = reqs.get(url, stream=True, cookies=self._cookie)
         return r.content
 
     def create_folder(self, project_id, parent_folder_id, folder_name):

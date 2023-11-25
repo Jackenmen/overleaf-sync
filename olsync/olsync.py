@@ -37,6 +37,8 @@ except ImportError:
               help="Sync remote project files from Overleaf to local file system only.")
 @click.option('-n', '--name', 'project_name', default="",
               help="Specify the Overleaf project name instead of the default name of the sync directory.")
+@click.option('--project-version', 'project_version', default=None, type=int,
+              help="Specify the Overleaf project version")
 @click.option('--store-path', 'cookie_path', default=".olauth", type=click.Path(exists=False),
               help="Relative path to load the persisted Overleaf cookie.")
 @click.option('-p', '--path', 'sync_path', default=".", type=click.Path(exists=True),
@@ -47,7 +49,7 @@ except ImportError:
 @click.option('-v', '--verbose', 'verbose', is_flag=True, help="Enable extended error logging.")
 @click.version_option(package_name='overleaf-sync')
 @click.pass_context
-def main(ctx, local, remote, project_name, cookie_path, sync_path, olignore_path, verbose):
+def main(ctx, local, remote, project_name, project_version, cookie_path, sync_path, olignore_path, verbose):
     if ctx.invoked_subcommand is None:
         if not os.path.isfile(cookie_path):
             raise click.ClickException(
@@ -78,7 +80,7 @@ def main(ctx, local, remote, project_name, cookie_path, sync_path, olignore_path
 
         zip_file = execute_action(
             lambda: zipfile.ZipFile(io.BytesIO(
-                overleaf_client.download_project(project["id"]))),
+                overleaf_client.download_project(project["id"], project_version))),
             "Downloading project",
             "Project downloaded successfully.",
             "Project could not be downloaded.",
