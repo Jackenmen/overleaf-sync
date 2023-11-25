@@ -19,6 +19,7 @@ import dateutil.parser
 import glob
 import fnmatch
 import traceback
+import json
 from pathlib import Path
 
 try:
@@ -165,6 +166,44 @@ def list_projects(cookie_path, verbose):
     execute_action(query_projects, "Querying all projects",
                    "Querying all projects successful.",
                    "Querying all projects failed. Please try again.", verbose)
+
+
+@main.command(name='versions')
+@click.option('-n', '--name', 'project_name', required=True,
+              help="Specify the Overleaf project name instead of the default name of the sync directory.")
+@click.option('--store-path', 'cookie_path', default=".olauth", type=click.Path(exists=False),
+              help="Relative path to load the persisted Overleaf cookie.")
+@click.option('--after', 'after', required=True, type=int,
+              help="Choose version number to start listing versions at.")
+@click.option('--versions-path', 'versions_path', default=".olversions", type=click.Path(exists=False),
+              help="Relative path to save versions list.")
+@click.option('-v', '--verbose', 'verbose', is_flag=True, help="Enable extended error logging.")
+def list_versions(project_name, cookie_path, after, versions_path, verbose):
+    if not os.path.isfile(cookie_path):
+        raise click.ClickException(
+            "Persisted Overleaf cookie not found. Please login or check store path.")
+
+    with open(cookie_path, 'rb') as f:
+        store = pickle.load(f)
+
+    overleaf_client = OverleafClient(store["cookie"], store["csrf"])
+
+    project = execute_action(
+        lambda: overleaf_client.get_project(project_name),
+        "Querying project",
+        "Project queried successfully.",
+        "Project could not be queried.",
+        verbose)
+
+    versions = execute_action(
+        lambda: overleaf_client.get_project_versions(project["id"], after),
+        "Querying project versions",
+        "Project versions queried successfully.",
+        "Project versions could not be queried.",
+        verbose)
+
+    with open(versions_path, 'w') as f:
+        json.dump(versions, f)
 
 
 @main.command(name='download')

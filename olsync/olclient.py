@@ -16,12 +16,14 @@ import uuid
 from socketIO_client import SocketIO
 import time
 import re
+import math
 
 # Where to get the CSRF Token and where to send the login request to
 LOGIN_URL = "https://www.overleaf.com/login"
 PROJECT_URL = "https://www.overleaf.com/project"  # The dashboard URL
 # The URL to download all the files in zip format
 DOWNLOAD_URL = "https://www.overleaf.com/project/{}/download/zip"
+VERSIONS_URL = "https://www.overleaf.com/project/{}/updates"
 VERSION_DOWNLOAD_URL = "https://www.overleaf.com/project/{}/version/{}/zip"
 UPLOAD_URL = "https://www.overleaf.com/project/{}/upload"  # The URL to upload files
 FOLDER_URL = "https://www.overleaf.com/project/{}/folder"  # The URL to create folders
@@ -105,6 +107,29 @@ class OverleafClient(object):
         json_content = json.loads(
             BeautifulSoup(projects_page.content, 'html.parser').find("meta", {"content": re.compile('\{.*"projects".*\}')}).get('content'))
         return next(OverleafClient.filter_projects(json_content['projects'], {"name": project_name}), None)
+
+    def get_project_versions(self, project_id, after):
+        """
+        Download project in zip format
+        Params: project_id, the id of the project
+        Returns: bytes string (zip file)
+        """
+        updates = []
+        before = math.inf
+        while True:
+            url = VERSIONS_URL.format(project_id)
+            if before is not math.inf:
+                url += "?before=" + str(before)
+            r = reqs.get(url, cookies=self._cookie)
+            to_add = []
+            for update in r.json()["updates"]:
+                before = min(update["fromV"], before)
+                if update["toV"] > after:
+                    to_add.append(update)
+            if not to_add:
+                break
+            updates.extend(to_add)
+        return updates
 
     def download_project(self, project_id, version=None):
         """
