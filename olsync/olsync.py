@@ -195,8 +195,8 @@ def list_versions(project_name, cookie_path, after, versions_path, verbose):
         "Project could not be queried.",
         verbose)
 
-    versions = execute_action(
-        lambda: overleaf_client.get_project_versions(project["id"], after),
+    versions, _ = execute_action(
+        lambda: (overleaf_client.get_project_versions(project["id"], after), 0),
         "Querying project versions",
         "Project versions queried successfully.",
         "Project versions could not be queried.",
